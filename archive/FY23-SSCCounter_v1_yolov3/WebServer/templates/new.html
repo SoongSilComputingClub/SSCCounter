@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <title>동방 출력 페이지</title>
+    <link rel="stylesheet" href = "{{ url_for('static', path='css/main	.css')}}">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://ssccpromotion.xyz/images/favicon.png">
+  </head>	
+
+  <body>
+    <div class="all">
+    <header>
+      <h1>
+        <a href="https://ssccpromotion.xyz/" class = "hrek" target="_blank" rel="noopener noreferrer"><img src = "{{ url_for('static' , path='images/SSCC_logo.png')}}" alt="sscc Logo Image" class="header-image"> SSCC</a>
+        <a href="https://github.com/AI-WonYJ/nCnt_Machine/tree/main" class="sorce" target="_blank" rel="noopener noreferrer">소스코드</a>
+
+      </h1>
+      <div class="Dev">
+        <a href="https://github.com/AI-WonYJ/nCnt_Machine/blob/main/README.md" class="Dev Process" target="_blank" rel="noopener noreferrer">개발 현황 보러가기</a>
+      </div>
+    </header>
+    
+    <main>
+      <div style="text-align:center;">
+        <br><br>
+        {% if counting == 0 %}
+          <img src="{{ url_for('static' , path='images/0 people.png')}}" alt="main Image" class="main-image">
+        {% elif counting == 1 %}
+          <img src="{{ url_for('static' , path='images/1 people.png')}}" alt="main Image" class="main-image">
+        {% elif counting == 2 %}
+          <img src="{{ url_for('static' , path='images/2 people.png')}}" alt="main Image" class="main-image">
+        {% elif counting == 3 %}
+          <img src="{{ url_for('static' , path='images/3 people.png')}}" alt="main Image" class="main-image">
+        {% elif counting == 4 %}
+          <img src="{{ url_for('static' , path='images/4 people.png')}}" alt="main Image" class="main-image">
+        {% elif counting == 5 %}
+          <img src="{{ url_for('static' , path='images/5 people.png')}}" alt="main Image" class="main-image">
+        {% elif counting == 6 %}
+          <img src="{{ url_for('static' , path='images/6 people.png')}}" alt="main Image" class="main-image">
+        {% else %}
+          <img src="{{ url_for('static' , path='images/people.png')}}" alt="main Image" class="main-image">
+        {% endif %}
+        <br><br><br>
+
+        <form>
+          <div class="txtbox" style="text-align:center;">
+            동아리 인원 수 출력:  <span style = "font-size:25px;"><storng>{{counting}}</storng></span>명  (기준: {{old_time}})<br>
+            새로고침 시간: {{time}}
+          </div>
+          <button class="w-btn w-btn-indigo" type="submit" style="width: 20%;">
+            확인하기 
+          </button>
+          <div class="beta">
+            <br>	<br><br><br<h4>개발자 두 명이 죽어가고 있어요 살려주세요...</h4>
+<br><br><br><br>
+          </div>
+        </form>
+
+      </div>
+    </main>
+
+    <footer>
+      <div class = "footer-img">
+        <a href='https://www.facebook.com/groups/ssccob/' class = "icon" target="_blank" rel="noopener noreferrer"><img src="{{ url_for('static', path='images/facebook.png')}}" alt="Facebook Image" class="footer-image"></a>
+        <a href='https://www.instagram.com/sscc_ssu/' class = "icon" target="_blank" rel="noopener noreferrer"><img src="{{ url_for('static', path='images/instagram.png')}}" alt="Instagram Image" class="footer-image"></a>
+        <a href='https://ssccpromotion.xyz/#SSCC' class = "icon" target="_blank" rel="noopener noreferrer"><img src="{{ url_for('static', path='images/SSCC_logo_rev.png')}}" alt="SSCC Image" class="footer-image"></a>
+        <a href='https://open.kakao.com/me/SSCC' class = "icon" target="_blank" rel="noopener noreferrer"><img src="{{ url_for('static', path='images/kakao.png')}}" alt="Kakao Image" class="footer-image"></a>
+      </div>
+      <a href='https://ai-wonyj.github.io/SSCC_Contributor/' class = "contributor" target="_blank" rel="noopener noreferrer">© 2022 SoongSil Computing Club</a>
+    </footer>
+    </div>
+  </body>
+</html>

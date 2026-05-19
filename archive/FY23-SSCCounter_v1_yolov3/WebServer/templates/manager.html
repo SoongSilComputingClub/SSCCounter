@@ -1,0 +1,116 @@
+<!-- 초기 웹 디자인, 소스코드: 40기 원영진 -->
+<!-- 웹페이지 개편: 36기 백승우 선배님 -->
+<!-- 유지 보수: 40기 원영진 -->
+
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <!-- <meta http-equiv="refresh" content="1"> -->
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy: default-src'*'" content="upgrade-insecure-requests">   <!-- 15기 장준권 선배님 아이디어 -->
+    <title>동방 출력 페이지</title>
+    <script src="http://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://ssccpromotion.xyz/images/favicon.png">
+    <link rel="stylesheet" href="static/css/main(Ver_2).css">
+  </head>
+
+  <body>
+    <header>
+
+
+      <div id="top-title">
+        <span class="top-left-title">
+          <a href="http://promotion.sscc.run/" class="hrek" target="_blank" rel="noopener noreferrer">
+            <img src="static/images/logo.png">
+            SSCC
+          </a>
+          Board
+        </span>
+        &nbsp;
+        <!-- <a class="link-source" href="https://github.com/AI-WonYJ/nCnt_Machine/tree/main" class="sorce" target="_blank" rel="noopener noreferrer">
+          소스코드
+        </a> -->
+      </div>
+      <nav>
+        <!-- <a href="https://ssccpromotion.xyz/" class="header-home">
+          Home
+        </a>
+        <a href="http://114.71.48.94:8080/" class="header-board">
+          SSCC Board
+        </a>
+        <a href="#" class="header-farm">
+          Smart Farm
+        </a> -->
+      </nav>
+      <div class="title">
+        <h1>
+          동아리방<br>실시간 상황판
+        </h1>
+      </div>
+      <div class="update">
+        마지막 업데이트 : <span id="get_time">{{get_time}}</span>
+        &nbsp
+        <button onClick="window.location.reload()" type="submit" id="refresh" class="mini compact ui button">
+          새로고침
+        </button>
+        <div class="Accessor">
+          {{Accessor}}
+        </div>
+        <!-- Start of CuterCounter Code -->
+        <a href="https://hits.seeyoufarm.com"><img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=http%3A%2F%2Fssccounter.shop%2Fmanager.page&count_bg=%233D7CC8&title_bg=%23555555&icon=dev-dot-to.svg&icon_color=%23E7E7E7&title=Manager&edge_flat=false"/></a>
+<!-- <a href="http://www.cutercounter.com/" target="_blank"><img src="https://www.cutercounter.com/hits.php?id=hmxfcpcf&nd=3&style=1" border="0" alt="visitor counter"></a> -->
+<!-- End of CuterCounter Code -->
+      </div>
+    </header>
+
+    <main>
+      <div class="card">
+        <div class="nCnt">
+          <!-- <h1>Beta Ver.</h1> -->
+          <h2>몇 명?</h2>
+          {% if Countable == 1%}   <!-- 36기 박근형 선배님 아이디어 -->
+          <img src="static/images/{{People_Count}} people.png" alt="main Image" class="main-image">   <!-- 36기 박근형 선배님 아이디어 -->
+          {% else %}
+          <img src="static/images/people.png" alt="main Image" class="main-image">
+          {% endif %}
+          <h3 id="People_Count">{{People_Count}}</h3>
+          <h3 id="Get_time">마지막 측정: {{Get_Time}}</h3>
+          &nbsp
+          <a class="link-source" href="http://ssccounter.shop/manager.Image" class="sorce" target="_blank" rel="noopener noreferrer">
+            <h1>실시간 확인하기</h1>
+          </a>
+        </div>
+        <!-- <div class="temperature">
+          <img src="static/images/temperature.png">
+          <h3 id="Temperature">{{Temperature}}</h3>
+        </div>
+        <div class="humidity">
+          <img src="static/images/humidity.png">
+          <h3 id="Humidity">{{Humidity}}</h3>
+        </div> -->
+      </div>
+    </main>
+
+    <footer>
+      <div class="footer-img">
+        <a href='https://www.facebook.com/groups/ssccob/' class="icon" target="_blank" rel="noopener noreferrer">
+          <img src="static/images/facebook.png" alt="Facebook Image" class="footer-image">
+        </a>
+        <a href='https://www.instagram.com/sscc_ssu/' class="icon" target="_blank" rel="noopener noreferrer">
+          <img src="static/images/instagram.png" alt="Instagram Image" class="footer-image">
+        </a>
+        <a href='http://promotion.sscc.run/' class="icon" target="_blank" rel="noopener noreferrer">
+          <img src="static/images/SSCC_logo_rev.png" alt="SSCC Image" class="footer-image">
+        </a>
+        <a href='https://open.kakao.com/o/spVNT95e' class="icon" target="_blank" rel="noopener noreferrer">
+          <img src="static/images/kakao.png" alt="Kakao Image" class="footer-image">
+        </a>
+      </div>
+      <a href='https://ai-wonyj.github.io/SSCC_Contributor/' class="contributor" target="_blank" rel="noopener noreferrer">
+        © 2022 SoongSil Computing Club
+      </a>
+    </footer>
+  </body>
+</html>

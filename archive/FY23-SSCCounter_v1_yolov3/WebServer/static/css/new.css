@@ -1,0 +1,125 @@
+@font-face {
+  font-family: 'BMJUA';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/BMJUA.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+header, form, button, .beta, footer {
+  font-family: 'BMJUA', sans-serif;
+  height: 100%;
+  margin: 0;
+  user-select : none;
+}
+
+
+
+h1 {      
+  padding:10px;
+  background-color:#000;
+  color:#fff;
+}
+
+h2 {      
+  padding:10px;
+  background-color:#000;
+  color:#fff;
+}
+
+form {
+  margin:0 auto;
+}
+
+.txtbox {
+  width: 400px;
+  border:1px solid #222;  
+  background-color: #d3d3d3;
+  padding:15px;
+  margin:0 auto;
+  text-align: left;
+}
+
+.header-image  {
+  width: 22px;
+  height: 22px;
+}
+
+.hrek {
+  color: white;
+  text-decoration-line: none;
+}
+
+.hrek:hover {
+  color: red;
+  text-decoration: underline;
+}
+
+.Dev {
+  font-size: 20px;
+  float: right;
+  display:inline-block;
+}
+
+.sorce{
+  color: white;
+  font-size: 0.5em;
+  text-decoration-line: none;
+}
+
+.sorce:hover {
+  color: red;
+  text-decoration: underline;
+}
+
+.w-btn {
+margin: 20px;
+height: 50px;
+position: relative;
+border: none;
+display: inline-block;
+padding: 15px 30px;
+border-radius: 15px;
+box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+font-size: 16px;
+text-decoration: none;
+transition: 0.25s;
+}
+
+.w-btn-indigo {
+  background-color: skyblue;
+  color: white;
+}
+
+.w-btn-indigo:hover {
+  color: rgb(96, 181, 214);
+  background: #ececec;
+}
+
+.beta{
+  font-size: 17px;
+}
+
+.contributor{
+  color: #d7d7d7;
+  text-decoration-line: none;
+  font-size: 18px
+}
+
+footer {
+  height: auto;
+  min-height: 100%;
+  bottom: 0;
+  background-color: #002540;
+  padding: 50px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.icon, .footer-image {
+  width: 40px;
+  height: 40px;
+  margin-top: 10px;
+  border-radius: 70%;
+  overflow: hidden;
+}
