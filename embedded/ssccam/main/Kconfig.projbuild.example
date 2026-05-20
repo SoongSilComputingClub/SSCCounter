@@ -1,0 +1,27 @@
+menu "SSCCounter Configuration"
+
+    config WIFI_SSID
+        string "WiFi SSID (공유기 이름)"
+        default "YOUR_WIFI_SSID"
+        help
+            ESP32가 연결할 와이파이의 이름입니다.
+
+    config WIFI_PASSWORD
+        string "WiFi Password (비밀번호)"
+        default "YOUR_WIFI_PASSWORD"
+        help
+            ESP32가 연결할 와이파이의 비밀번호입니다.
+
+    config SERVER_URL
+        string "API Server URL"
+        default "http://192.168.0.x:8000/api/v2/device/upload"
+        help
+            상태를 조회할 FastAPI 서버의 전체 주소입니다.
+
+    config COMMAND_URL
+        string "Command API URL"
+        default "http://192.168.0.x:8000/api/v2/device/command"
+        help
+            명령을 전송할 FastAPI 서버의 전체 주소입니다.
+
+endmenu
