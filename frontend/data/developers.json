@@ -1,0 +1,77 @@
+[
+  {
+    "version": "v2.1 (Current)",
+    "description": "현재 동아리방에서 사용 중인 최신 버전입니다.",
+    "repoUrl": "https://github.com/SoongSilComputingClub/SSCCounter",
+    "developers": [
+      {
+        "name": "원영진",
+        "generation": "40기",
+        "major": "AI소프트웨어학부",
+        "studentId": "22학번",
+        "photo": "https://github.com/Dongbang-Yeuijiguk/2025ESWContest_smart_3019/raw/main/images/%EC%9B%90%EC%98%81%EC%A7%84.jpg",
+        "role": "Full Stack",
+        "github": "https://github.com/AI-WonYJ"
+      }
+    ]
+  },
+  {
+    "version": "v2.0 (Legacy)",
+    "description": "YOLOv8을 사용해 성능을 향상시킨 SSCCounter의 두 번째 버전입니다.",
+    "repoUrl": "https://github.com/SoongSilComputingClub/FY25-SSCCounter",
+    "developers": [
+      {
+        "name": "원영진",
+        "generation": "40기",
+        "major": "AI소프트웨어학부",
+        "studentId": "22학번",
+        "photo": "https://github.com/Dongbang-Yeuijiguk/2025ESWContest_smart_3019/raw/main/images/%EC%9B%90%EC%98%81%EC%A7%84.jpg",
+        "role": "PM & Hardware",
+        "github": "https://github.com/AI-WonYJ"
+      },
+      {
+        "name": "권나현",
+        "generation": "42기",
+        "major": "AI소프트웨어학부",
+        "studentId": "24학번",
+        "photo": "https://avatars.githubusercontent.com/u/127591694?v=4",
+        "role": "AI & WEB",
+        "github": "https://github.com/KWNahyun"
+      }
+    ]
+  },
+  {
+    "version": "v1.0 (Legacy)",
+    "description": "초기 기틀을 다진 SSCCounter의 첫 번째 버전입니다.",
+    "repoUrl": "https://github.com/SoongSilComputingClub/FY23-SSCCounter",
+    "developers": [
+      {
+        "name": "백승우",
+        "generation": "36기",
+        "major": "전기정보공학부",
+        "studentId": "18학번",
+        "photo": "https://github.com/SSCC-space/SSCCounter/assets/101448204/8f10e608-b397-4425-b39c-9f5fc3be0305",
+        "role": "PM & WEB",
+        "github": "https://github.com/SWtheWhite"
+      },
+      {
+        "name": "원영진",
+        "generation": "40기",
+        "major": "AI소프트웨어학부",
+        "studentId": "22학번",
+        "photo": "https://github.com/Dongbang-Yeuijiguk/2025ESWContest_smart_3019/raw/main/images/%EC%9B%90%EC%98%81%EC%A7%84.jpg",
+        "role": "Hardware & WEB",
+        "github": "https://github.com/AI-WonYJ"
+      },
+      {
+        "name": "이종인",
+        "generation": "39기",
+        "major": "컴퓨터학부",
+        "studentId": "21학번",
+        "photo": "https://avatars.githubusercontent.com/u/76873740?v=4",
+        "role": "WEB",
+        "github": "https://github.com/bell-person-ii"
+      }
+    ]
+  }
+]
