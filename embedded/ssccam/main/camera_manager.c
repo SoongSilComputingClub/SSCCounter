@@ -46,8 +46,8 @@ esp_err_t camera_manager_init(void) {
         .pixel_format = PIXFORMAT_JPEG, 
         .frame_size = FRAMESIZE_VGA,    
         .jpeg_quality = 12,             
-        .fb_count = 1,
-        .grab_mode = CAMERA_GRAB_WHEN_EMPTY
+        .fb_count = 2,                 
+        .grab_mode = CAMERA_GRAB_LATEST,
     };
 
     esp_err_t err = esp_camera_init(&camera_config);
