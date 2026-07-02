@@ -23,10 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 이미지를 임시로 저장할 디렉토리 설정
-UPLOAD_DIR = "uploaded_images"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
 # YOLO 모델 로드 (yolo_inference.py에서 가져옴)
 print("Loading YOLO model...")
 model = YOLO("yolov8n.pt")
@@ -90,10 +86,10 @@ async def get_today_stats():
         if h <= current_hour:
             # 임시로 LATEST_COUNT 근처의 랜덤 값 생성 (나중에 DB 연동 시 제거)
             today_data.append({"hour": h, "count": max(0, LATEST_COUNT + np.random.randint(-2, 3))})
-    
+
     if not today_data:
         today_data.append({"hour": 9, "count": 0})
-        
+
     return today_data
 
 @app.get("/api/v2/stats/weekly")
@@ -113,35 +109,43 @@ async def get_weekly_stats():
 
 @app.post("/api/v2/device/upload")
 async def upload_image(file: UploadFile = File(...)):
+    """
+    [ESP32용] ESP32-CAM이 업로드한 이미지를 서버 메모리에서만 처리합니다.
+
+    처리 흐름:
+    1. 업로드된 이미지 bytes 읽기
+    2. OpenCV로 JPEG 디코딩
+    3. YOLO로 사람 수 추론
+    4. 최신 인원 수 갱신
+    5. 이미지 파일은 저장하지 않고 함수 종료와 함께 폐기
+    """
     global LATEST_COUNT
 
-    try:
-        # 현재 시간을 파일명으로 사용하여 저장
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_extension = file.filename.split('.')[-1]
-        file_path = os.path.join(UPLOAD_DIR, f"{timestamp}.{file_extension}")
+    measured_at = datetime.now()
 
+    try:
+        # 업로드된 이미지 bytes를 메모리에서 읽음
         content = await file.read()
-        
-        # 파일 저장
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
-            
+
+        # bytes -> numpy array -> OpenCV frame
         nparr = np.frombuffer(content, np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-        people_count = 0
-        if frame is not None:
-            people_count = infer_people_count(frame)
-            LATEST_COUNT = people_count
-            print(f"[{timestamp}] Inference Result: {people_count} people detected.")
-        else:
-            print("Failed to decode image for YOLO inference.")
+        if frame is None:
+            print(f"[{measured_at}] Failed to decode image for YOLO inference.")
+            return {
+                "status": "error",
+                "message": "Failed to decode image."
+            }
+
+        people_count = infer_people_count(frame)
+        LATEST_COUNT = people_count
+        
+        print(f"[{measured_at}] Inference Result: {people_count} people detected.")
 
         return {
-            "status": "success", 
-            "message": "Image processed successfully", 
-            "file_path": file_path,
+            "status": "success",
+            "message": "Image processed successfully",
             "detected_count": people_count
         }
     except Exception as e:
