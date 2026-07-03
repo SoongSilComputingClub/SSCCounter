@@ -11,3 +11,5 @@ let selectedDay = 'mon';
 
 // Developer info
 let versionData = [];
+
+let lastAnalysisAt = null;

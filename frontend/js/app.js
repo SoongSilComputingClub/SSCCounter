@@ -6,16 +6,35 @@ async function fetchCurrentCount() {
     const response = await fetch('/api/v2/count/current');
     if (response.ok) {
       const data = await response.json();
-      const newCount = data.count;
+      const newCount = Number(data.count ?? 0);
+      const newUpdatedAt = data.updated_at ?? null;
+      const shouldRefreshStats =
+        lastAnalysisAt !== null &&
+        newUpdatedAt !== null &&
+        newUpdatedAt !== lastAnalysisAt;
+
+      updateLastAnalyzedTime(newUpdatedAt);
       
+      if (data.today_max_count !== undefined) {
+        document.getElementById('today-max').textContent = `${Math.round(Number(data.today_max_count ?? 0 ))}명`;
+      }
+      if (data.today_avg_count !== undefined) {
+        const avgCount = Number(data.today_avg_count ?? 0);
+        document.getElementById('today-avg').textContent = `${avgCount.toFixed(1).replace('.0', '')}명`;
+      }
+
       /* ToDo: 인원수가 변할 때마다 fetchInitialData()가 호출되어 /stats/today와 /stats/weekly를 모두 재요청함.
          카운트 변화가 잦으면 불필요한 네트워크/서버 부하가 커질 수 있으니,
          today stats만 갱신하거나 일정 주기(예: 1~5분)로 별도 갱신하는 등 호출 빈도를 제한 고려해볼 것.*/
       if (currentCount !== newCount) {
         currentCount = newCount;
         animateCounter(currentCount);
+      }
+      if (shouldRefreshStats) {
         fetchInitialData(); 
       }
+
+      lastAnalysisAt = newUpdatedAt;
     }
   } catch (error) {
     console.error('인원수 데이터 갱신 실패:', error);
@@ -30,7 +49,6 @@ async function fetchInitialData() {
     const weeklyResponse = await fetch('/api/v2/stats/weekly');
     if (weeklyResponse.ok) weeklyStats = await weeklyResponse.json();
 
-    updateHomeStats();
     renderMiniChart();
     updateStatsChart(selectedDay);
   } catch (error) {
@@ -99,16 +117,24 @@ function updateCurrentTime() {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   document.getElementById('current-time').textContent = timeStr;
-  document.getElementById('last-update').textContent = timeStr;
 }
 
-/* ToDo: 데이터 수신 성공 시점에만 갱신하고, current-time만 1초마다 갱신하도록 분리 */
-function updateHomeStats() {
-  if (todayHours.length === 0) return;
-  const maxCount = Math.max(...todayHours.map(h => h.count));
-  const avgCount = Math.round(todayHours.reduce((s, h) => s + h.count, 0) / todayHours.length);
-  document.getElementById('today-max').textContent = maxCount + '명';
-  document.getElementById('today-avg').textContent = avgCount + '명';
+function updateLastAnalyzedTime(updatedAt) {
+  const el = document.getElementById('last-update');
+
+  if (!updatedAt) {
+    el.textContent = '--:--';
+    return;
+  }
+
+  const date = new Date(updatedAt);
+
+  if (Number.isNaN(date.getTime())) {
+    el.textContent='--:--';
+    return;
+  }
+
+  el.textContent = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 // XSS 방어용 문자열 변환 함수
