@@ -11,12 +11,35 @@ import time
 from decimal import Decimal
 import psycopg
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+from psycopg_pool import ConnectionPool
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-app = FastAPI(title="SSCCounter API", version="2.1")
+db_pool = None
+
+@asynccontextmanager
+async def lifespan(app:FastAPI):
+    global db_pool
+
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not set")
+    
+    db_pool = ConnectionPool(
+        conninfo=DATABASE_URL,
+        min_size=1,
+        max_size=10,
+        open=True,
+    )
+
+    try:
+        yield
+    finally:
+        db_pool.close()
+
+app = FastAPI(title="SSCCounter API", version="2.1", lifespan=lifespan)
 
 app.mount("/data", StaticFiles(directory="../frontend/data"), name="data")
 app.mount("/css", StaticFiles(directory="../frontend/css"), name="css")
@@ -43,9 +66,9 @@ def infer_people_count(frame):
 # ---------------------------------------------
 
 def get_db_connection():
-    if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL is not set")
-    return psycopg.connect(DATABASE_URL)
+    if db_pool is None:
+        raise RuntimeError("Database connection pool is not initialized")
+    return db_pool.connection()
 
 def to_float(value):
     if value is None:
@@ -103,9 +126,9 @@ def save_successful_inference(people_count: int, trigger_type: str = "scheduled"
     YOLO 추론 성공 결과를 admin raw log와 dashboard summary tables에 반영합니다.
 
     처리 순서:
-    1. admin.caputre_logs insert
+    1. admin.capture_logs insert
     2. dashboard.current_status update
-    3. dashborad.today_hourly_stats update
+    3. dashboard.today_hourly_stats update
     4. dashboard.daily_stats update
     5. dashboard.weekday_hourly_stats update
     """
@@ -295,6 +318,7 @@ def save_successful_inference(people_count: int, trigger_type: str = "scheduled"
                         COUNT(*) AS sample_count
                     FROM admin.capture_logs
                     WHERE status = 'success'
+                      AND measured_at >= now() - interval '4 weeks'
                       AND EXTRACT(ISODOW FROM measured_at)::int BETWEEN 1 AND 5
                       AND EXTRACT(HOUR FROM measured_at)::int BETWEEN 9 AND 22
                     GROUP BY weekday, hour

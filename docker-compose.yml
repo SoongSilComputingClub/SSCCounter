@@ -19,13 +19,12 @@ services:
     image: postgres:16
     container_name: ssccounter-postgres
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     environment:
-      POSTGRES_DB: ssccounter
-      POSTGRES_USER: ssccounter
-      POSTGRES_PASSWORD: change_me
       TZ: Asia/Seoul
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - ssccounter_postgres_data:/var/lib/postgresql/data
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro

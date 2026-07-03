@@ -4,5 +4,5 @@ python-multipart
 opencv-python
 numpy
 ultralytics
-psycopg[binary]
+psycopg[binary,pool]
 python-dotenv
