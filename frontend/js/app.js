@@ -7,7 +7,13 @@ async function fetchCurrentCount() {
     if (response.ok) {
       const data = await response.json();
       const newCount = Number(data.count ?? 0);
-      updateLastAnalyzedTime(data.updated_at);
+      const newUpdatedAt = data.updated_at ?? null;
+      const shouldRefreshStats =
+        lastAnalysisAt !== null &&
+        newUpdatedAt !== null &&
+        newUpdatedAt !== lastAnalysisAt;
+
+      updateLastAnalyzedTime(newUpdatedAt);
       
       if (data.today_max_count !== undefined) {
         document.getElementById('today-max').textContent = `${Math.round(Number(data.today_max_count ?? 0 ))}명`;
@@ -23,8 +29,12 @@ async function fetchCurrentCount() {
       if (currentCount !== newCount) {
         currentCount = newCount;
         animateCounter(currentCount);
+      }
+      if (shouldRefreshStats) {
         fetchInitialData(); 
       }
+
+      lastAnalysisAt = newUpdatedAt;
     }
   } catch (error) {
     console.error('인원수 데이터 갱신 실패:', error);
