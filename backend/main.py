@@ -7,6 +7,14 @@ from datetime import datetime
 import cv2
 import numpy as np
 from ultralytics import YOLO
+import time
+from decimal import Decimal
+import psycopg
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 app = FastAPI(title="SSCCounter API", version="2.1")
 
@@ -34,8 +42,357 @@ def infer_people_count(frame):
 
 # ---------------------------------------------
 
+def get_db_connection():
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not set")
+    return psycopg.connect(DATABASE_URL)
+
+def to_float(value):
+    if value is None:
+        return 0.0
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+def get_current_status_from_db():
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT current_people_count, updated_at, today_max_people_count, today_avg_people_count
+                FROM dashboard.current_status
+                WHERE id = 1
+                """
+            )
+            row = cur.fetchone()
+        
+    if row is None:
+        return {
+            "count": 0,
+            "updated_at": None,
+            "today_max_count": 0,
+            "today_avg_count": 0.0
+        }
+    
+    return {
+        "count": row[0],
+        "updated_at": row[1].isoformat() if row[1] else None,
+        "today_max_count": row[2],
+        "today_avg_count": to_float(row[3])
+    }
+
+def save_failed_inference(error_message: str, trigger_type: str = "scheduled", inference_time_ms: int | None = None):
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO admin.capture_logs (people_count, status, trigger_type, inference_time_ms, error_message)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (
+                    None,
+                    "failed",
+                    trigger_type,
+                    inference_time_ms,
+                    error_message
+                )
+            )
+
+def save_successful_inference(people_count: int, trigger_type: str = "scheduled", inference_time_ms: int | None = None):
+    """
+    YOLO 추론 성공 결과를 admin raw log와 dashboard summary tables에 반영합니다.
+
+    처리 순서:
+    1. admin.caputre_logs insert
+    2. dashboard.current_status update
+    3. dashborad.today_hourly_stats update
+    4. dashboard.daily_stats update
+    5. dashboard.weekday_hourly_stats update
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            # 1. 관리자용 raw log 저장
+            cur.execute(
+                """
+                INSERT INTO admin.capture_logs (people_count, status, trigger_type, inference_time_ms)
+                VALUES (%s, %s, %s, %s)
+                RETURNING measured_at
+                """,
+                (
+                    people_count,
+                    "success",
+                    trigger_type,
+                    inference_time_ms
+                )
+            )
+            measured_at = cur.fetchone()[0]
+
+            # 2. dashboard.current_status 갱신
+            cur.execute(
+                """
+                WITH today_summary AS (
+                    SELECT
+                        COALESCE(MAX(people_count), 0) AS today_max_people_count,
+                        COALESCE(ROUND(AVG(people_count)::numeric, 2), 0) AS today_avg_people_count
+                    FROM admin.capture_logs
+                    WHERE status = 'success'
+                      AND measured_at >= date_trunc('day', now())
+                      AND measured_at < date_trunc('day', now()) + interval '1 day'
+                )
+                INSERT INTO dashboard.current_status (
+                    id,
+                    current_people_count,
+                    updated_at,
+                    today_max_people_count,
+                    today_avg_people_count
+                )
+                SELECT
+                    1,
+                    %s,
+                    %s,
+                    today_max_people_count,
+                    today_avg_people_count
+                FROM today_summary
+                ON CONFLICT (id)
+                DO UPDATE SET
+                    current_people_count = EXCLUDED.current_people_count,
+                    updated_at = EXCLUDED.updated_at,
+                    today_max_people_count = EXCLUDED.today_max_people_count,
+                    today_avg_people_count = EXCLUDED.today_avg_people_count
+                """,
+                (
+                    people_count,
+                    measured_at
+                )
+            )
+
+            # 3. dashboard.today_hourly_stats 갱신
+            cur.execute(
+                """
+                WITH hourly AS (
+                    SELECT
+                        current_date AS stat_date,
+                        EXTRACT(HOUR FROM measured_at)::int AS hour,
+                        ROUND(AVG(people_count)::numeric, 2) AS avg_people_count,
+                        MAX(people_count) AS max_people_count,
+                        COUNT(*) AS sample_count
+                    FROM admin.capture_logs
+                    WHERE status = 'success'
+                      AND measured_at >= date_trunc('day', now())
+                      AND measured_at < date_trunc('day', now()) + interval '1 day'
+                    GROUP BY stat_date, hour
+                )
+                INSERT INTO dashboard.today_hourly_stats (
+                    stat_date,
+                    hour,
+                    avg_people_count,
+                    max_people_count,
+                    sample_count,
+                    updated_at
+                )
+                SELECT
+                    stat_date,
+                    hour,
+                    avg_people_count,
+                    max_people_count,
+                    sample_count,
+                    now()
+                FROM hourly
+                ON CONFLICT (stat_date, hour)
+                DO UPDATE SET
+                    avg_people_count = EXCLUDED.avg_people_count,
+                    max_people_count = EXCLUDED.max_people_count,
+                    sample_count = EXCLUDED.sample_count,
+                    updated_at = EXCLUDED.updated_at
+                """
+            )
+
+            # 4. dashboard.daily_stats 갱신
+            cur.execute(
+                """
+                WITH base AS (
+                    SELECT
+                        people_count,
+                        measured_at,
+                        EXTRACT(HOUR FROM measured_at)::int AS hour
+                    FROM admin.capture_logs
+                    WHERE status = 'success'
+                      AND measured_at >= date_trunc('day', now())
+                      AND measured_at < date_trunc('day', now()) + interval '1 day'
+                ),
+                hourly AS (
+                    SELECT
+                        hour,
+                        ROUND(AVG(people_count)::numeric, 2) AS avg_people_count
+                    FROM base
+                    WHERE hour BETWEEN 9 AND 22
+                    GROUP BY hour
+                ),
+                summary AS (
+                    SELECT
+                        current_date AS stat_date,
+                        COALESCE(ROUND(AVG(people_count)::numeric, 2), 0) AS avg_people_count,
+                        COALESCE(MAX(people_count), 0) AS max_people_count,
+                        COALESCE(MIN(people_count), 0) AS min_people_count,
+                        COUNT(*) AS sample_count
+                    FROM base
+                ),
+                peak AS (
+                    SELECT hour AS peak_hour
+                    FROM hourly
+                    ORDER BY avg_people_count DESC, hour ASC
+                    LIMIT 1
+                ),
+                quiet AS (
+                    SELECT hour AS quiet_hour
+                    FROM hourly
+                    ORDER BY avg_people_count ASC, hour ASC
+                    LIMIT 1
+                )
+                INSERT INTO dashboard.daily_stats (
+                    stat_date,
+                    avg_people_count,
+                    max_people_count,
+                    min_people_count,
+                    peak_hour,
+                    quiet_hour,
+                    sample_count,
+                    updated_at
+                )
+                SELECT
+                    summary.stat_date,
+                    summary.avg_people_count,
+                    summary.max_people_count,
+                    summary.min_people_count,
+                    peak.peak_hour,
+                    quiet.quiet_hour,
+                    summary.sample_count,
+                    now()
+                FROM summary
+                LEFT JOIN peak ON true
+                LEFT JOIN quiet ON true
+                ON CONFLICT (stat_date)
+                DO UPDATE SET
+                    avg_people_count = EXCLUDED.avg_people_count,
+                    max_people_count = EXCLUDED.max_people_count,
+                    min_people_count = EXCLUDED.min_people_count,
+                    peak_hour = EXCLUDED.peak_hour,
+                    quiet_hour = EXCLUDED.quiet_hour,
+                    sample_count = EXCLUDED.sample_count,
+                    updated_at = EXCLUDED.updated_at
+                """
+            )
+
+            # 5. dashboard.weekday_hourly_stats 갱신
+            cur.execute(
+                """
+                WITH weekday_hourly AS (
+                    SELECT
+                        EXTRACT(ISODOW FROM measured_at)::int AS weekday,
+                        EXTRACT(HOUR FROM measured_at)::int AS hour,
+                        ROUND(AVG(people_count)::numeric, 2) AS avg_people_count,
+                        MAX(people_count) AS max_people_count,
+                        COUNT(*) AS sample_count
+                    FROM admin.capture_logs
+                    WHERE status = 'success'
+                      AND EXTRACT(ISODOW FROM measured_at)::int BETWEEN 1 AND 5
+                      AND EXTRACT(HOUR FROM measured_at)::int BETWEEN 9 AND 22
+                    GROUP BY weekday, hour
+                )
+                INSERT INTO dashboard.weekday_hourly_stats (
+                    weekday,
+                    hour,
+                    avg_people_count,
+                    max_people_count,
+                    sample_count,
+                    updated_at
+                )
+                SELECT
+                    weekday,
+                    hour,
+                    avg_people_count,
+                    max_people_count,
+                    sample_count,
+                    now()
+                FROM weekday_hourly
+                ON CONFLICT (weekday, hour)
+                DO UPDATE SET
+                    avg_people_count = EXCLUDED.avg_people_count,
+                    max_people_count = EXCLUDED.max_people_count,
+                    sample_count = EXCLUDED.sample_count,
+                    updated_at = EXCLUDED.updated_at
+                """
+            )
+
+def get_today_stats_from_db():
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT hours.hour, COALESCE(stats.avg_people_count, 0) AS count
+                FROM generate_series(9, 22) AS hours(hour)
+                LEFT JOIN dashboard.today_hourly_stats AS stats
+                  ON stats.hour = hours.hour
+                 AND stats.stat_date = current_date
+                ORDER BY hours.hour
+                """
+            )
+            rows = cur.fetchall()
+
+    return [
+        {
+            "hour": row[0],
+            "count": row[1]
+        }
+        for row in rows
+    ]
+
+def get_weekly_stats_from_db():
+    day_key_map = {
+        1: "mon",
+        2: "tue",
+        3: "wed",
+        4: "thu",
+        5: "fri"
+    }
+
+    weekly_stats = {
+        "mon": [0] * 14,
+        "tue": [0] * 14,
+        "wed": [0] * 14,
+        "thu": [0] * 14,
+        "fri": [0] * 14
+    }
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    weekday,
+                    hour,
+                    avg_people_count
+                FROM dashboard.weekday_hourly_stats
+                WHERE weekday BETWEEN 1 AND 5
+                  AND hour BETWEEN 9 AND 22
+                ORDER BY weekday, hour
+                """
+            )
+            rows = cur.fetchall()
+    for weekday, hour, avg_people_count in rows:
+        day_key = day_key_map.get(weekday)
+        if not day_key:
+            continue
+        
+        index = hour - 9
+        if 0 <= index < 14:
+            weekly_stats[day_key][index] = to_float(avg_people_count)
+
+    return weekly_stats
+
+# ---------------------------------------------
+
 SHOULD_CAPTURE = False
-LATEST_COUNT = 0  # 가장 최근에 측정된 인원수
 
 @app.post("/api/v2/test/trigger")
 async def trigger_capture():
@@ -71,39 +428,21 @@ async def get_current_count():
     """
     [프론트엔드용] 현재 동아리방 인원수를 반환합니다.
     """
-    return {"count": LATEST_COUNT}
+    return get_current_status_from_db()
 
 @app.get("/api/v2/stats/today")
 async def get_today_stats():
     """
-    [프론트엔드용] 오늘 시간대별 인원 통계를 반환합니다. (현재는 더미 데이터)
-    추후 PostgreSQL DB 연동 시 쿼리 결과를 반환하도록 수정해야 합니다.
+    [프론트엔드용] 오늘 시간대별 인원 통계를 반환합니다.
     """
-    current_hour = datetime.now().hour
-    today_data = []
-    # 9시부터 현재 시간까지의 가짜 데이터 생성
-    for h in range(9, 23):
-        if h <= current_hour:
-            # 임시로 LATEST_COUNT 근처의 랜덤 값 생성 (나중에 DB 연동 시 제거)
-            today_data.append({"hour": h, "count": max(0, LATEST_COUNT + np.random.randint(-2, 3))})
-
-    if not today_data:
-        today_data.append({"hour": 9, "count": 0})
-
-    return today_data
+    return get_today_stats_from_db()
 
 @app.get("/api/v2/stats/weekly")
 async def get_weekly_stats():
     """
-    [프론트엔드용] 최근 4주간의 요일별 평균 통계를 반환합니다. (현재는 더미 데이터)
+    [프론트엔드용] 평일 시간대별 평균 통계를 반환합니다.
     """
-    return {
-        "mon": [2, 3, 5, 8, 6, 4, 0, 0, 8, 5, 3, 2, 1, 1],
-        "tue": [1, 2, 4, 6, 0, 0, 0, 0, 3, 7, 4, 3, 2, 1],
-        "wed": [3, 4, 6, 9, 11, 14, 15, 13, 9, 6, 4, 2, 1, 1],
-        "thu": [2, 3, 5, 7, 12, 16, 18, 15, 11, 8, 5, 3, 2, 1],
-        "fri": [1, 2, 3, 5, 8, 10, 12, 9, 7, 4, 3, 2, 1, 0]
-    }
+    return get_weekly_stats_from_db()
 
 # --------------------------------------------
 
@@ -119,8 +458,6 @@ async def upload_image(file: UploadFile = File(...)):
     4. 최신 인원 수 갱신
     5. 이미지 파일은 저장하지 않고 함수 종료와 함께 폐기
     """
-    global LATEST_COUNT
-
     measured_at = datetime.now()
 
     try:
@@ -132,16 +469,23 @@ async def upload_image(file: UploadFile = File(...)):
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
         if frame is None:
-            print(f"[{measured_at}] Failed to decode image for YOLO inference.")
+            error_message = "Failed to decode image."
+            print(f"[{measured_at}] {error_message}")
+
+            save_failed_inference(error_message=error_message, trigger_type="scheduled")
+
             return {
                 "status": "error",
-                "message": "Failed to decode image."
+                "message": error_message
             }
 
+        inference_start = time.perf_counter()
         people_count = infer_people_count(frame)
-        LATEST_COUNT = people_count
-        
-        print(f"[{measured_at}] Inference Result: {people_count} people detected.")
+        inference_time_ms = int((time.perf_counter() - inference_start) * 1000)
+
+        save_successful_inference(people_count=people_count, trigger_type="scheduled", inference_time_ms=inference_time_ms)
+
+        print(f"[{measured_at}] Inference Result: {people_count} people detected. Inference Time: {inference_time_ms} ms")
 
         return {
             "status": "success",
@@ -149,5 +493,12 @@ async def upload_image(file: UploadFile = File(...)):
             "detected_count": people_count
         }
     except Exception as e:
-        print(f"Error during upload/inference: {str(e)}")
-        return {"status": "error", "message": str(e)}
+        error_message = str(e)
+        print(f"Error during upload/inference: {error_message}")
+
+        try: 
+            save_failed_inference(error_message=error_message, trigger_type="scheduled")
+        except Exception as db_error:
+            print(f"Failed to save error log to DB: {str(db_error)}")
+
+        return {"status": "error", "message": error_message}
