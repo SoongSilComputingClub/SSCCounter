@@ -43,10 +43,10 @@ esp_err_t camera_manager_init(void) {
         .xclk_freq_hz = 20000000,
         .ledc_timer = LEDC_TIMER_0,
         .ledc_channel = LEDC_CHANNEL_0,
-        .pixel_format = PIXFORMAT_JPEG, 
-        .frame_size = FRAMESIZE_VGA,    
-        .jpeg_quality = 12,             
-        .fb_count = 2,                 
+        .pixel_format = PIXFORMAT_JPEG,
+        .frame_size = FRAMESIZE_VGA,
+        .jpeg_quality = 12,
+        .fb_count = 2,
         .grab_mode = CAMERA_GRAB_LATEST,
     };
 
@@ -55,7 +55,7 @@ esp_err_t camera_manager_init(void) {
         ESP_LOGE(TAG, "Camera Init Failed: 0x%x", err);
         return err;
     }
-    
+
     ESP_LOGI(TAG, "Camera Init Success");
     return ESP_OK;
 }
