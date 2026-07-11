@@ -1,18 +1,19 @@
+import os
+import time
+from contextlib import asynccontextmanager
+from datetime import datetime
+from decimal import Decimal
+from typing import Annotated
+
+import cv2
+import numpy as np
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-import os
-from datetime import datetime
-import cv2
-import numpy as np
-from ultralytics import YOLO
-import time
-from decimal import Decimal
-import psycopg
-from dotenv import load_dotenv
-from contextlib import asynccontextmanager
 from psycopg_pool import ConnectionPool
+from ultralytics import YOLO
 
 load_dotenv()
 
@@ -20,13 +21,14 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 db_pool = None
 
+
 @asynccontextmanager
-async def lifespan(app:FastAPI):
+async def lifespan(app: FastAPI):
     global db_pool
 
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL is not set")
-    
+
     db_pool = ConnectionPool(
         conninfo=DATABASE_URL,
         min_size=1,
@@ -39,6 +41,7 @@ async def lifespan(app:FastAPI):
     finally:
         db_pool.close()
 
+
 app = FastAPI(title="SSCCounter API", version="2.1", lifespan=lifespan)
 
 app.mount("/data", StaticFiles(directory="../frontend/data"), name="data")
@@ -48,7 +51,8 @@ app.mount("/js", StaticFiles(directory="../frontend/js"), name="js")
 # ---------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 모든 도메인 허용 (개발 단계에서는 편리하지만, 배포 시에는 보안을 위해 특정 도메인만 허용하는 것이 좋습니다)
+    # 개발 단계에서는 모든 도메인을 허용합니다.
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,16 +63,22 @@ print("Loading YOLO model...")
 model = YOLO("yolov8n.pt")
 print("YOLO model loaded successfully.")
 
+
 def infer_people_count(frame):
-    results = model.predict(source=frame, conf=0.3, classes=[0], imgsz=416, verbose=False)
+    results = model.predict(
+        source=frame, conf=0.3, classes=[0], imgsz=416, verbose=False
+    )
     return (results[0].boxes.cls == 0).sum().item()
 
+
 # ---------------------------------------------
+
 
 def get_db_connection():
     if db_pool is None:
         raise RuntimeError("Database connection pool is not initialized")
     return db_pool.connection()
+
 
 def to_float(value):
     if value is None:
@@ -77,51 +87,66 @@ def to_float(value):
         return float(value)
     return value
 
+
 def get_current_status_from_db():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT current_people_count, updated_at, today_max_people_count, today_avg_people_count
+                SELECT
+                    current_people_count,
+                    updated_at,
+                    today_max_people_count,
+                    today_avg_people_count
                 FROM dashboard.current_status
                 WHERE id = 1
                 """
             )
             row = cur.fetchone()
-        
+
     if row is None:
         return {
             "count": 0,
             "updated_at": None,
             "today_max_count": 0,
-            "today_avg_count": 0.0
+            "today_avg_count": 0.0,
         }
-    
+
     return {
         "count": row[0],
         "updated_at": row[1].isoformat() if row[1] else None,
         "today_max_count": row[2],
-        "today_avg_count": to_float(row[3])
+        "today_avg_count": to_float(row[3]),
     }
 
-def save_failed_inference(error_message: str, trigger_type: str = "scheduled", inference_time_ms: int | None = None):
+
+def save_failed_inference(
+    error_message: str,
+    trigger_type: str = "scheduled",
+    inference_time_ms: int | None = None,
+):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO admin.capture_logs (people_count, status, trigger_type, inference_time_ms, error_message)
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                (
-                    None,
-                    "failed",
+                INSERT INTO admin.capture_logs (
+                    people_count,
+                    status,
                     trigger_type,
                     inference_time_ms,
                     error_message
                 )
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (None, "failed", trigger_type, inference_time_ms, error_message),
             )
 
-def save_successful_inference(people_count: int, trigger_type: str = "scheduled", inference_time_ms: int | None = None):
+
+def save_successful_inference(
+    people_count: int,
+    trigger_type: str = "scheduled",
+    inference_time_ms: int | None = None,
+):
     """
     YOLO 추론 성공 결과를 admin raw log와 dashboard summary tables에 반영합니다.
 
@@ -137,16 +162,16 @@ def save_successful_inference(people_count: int, trigger_type: str = "scheduled"
             # 1. 관리자용 raw log 저장
             cur.execute(
                 """
-                INSERT INTO admin.capture_logs (people_count, status, trigger_type, inference_time_ms)
-                VALUES (%s, %s, %s, %s)
-                RETURNING measured_at
-                """,
-                (
+                INSERT INTO admin.capture_logs (
                     people_count,
-                    "success",
+                    status,
                     trigger_type,
                     inference_time_ms
                 )
+                VALUES (%s, %s, %s, %s)
+                RETURNING measured_at
+                """,
+                (people_count, "success", trigger_type, inference_time_ms),
             )
             measured_at = cur.fetchone()[0]
 
@@ -156,7 +181,10 @@ def save_successful_inference(people_count: int, trigger_type: str = "scheduled"
                 WITH today_summary AS (
                     SELECT
                         COALESCE(MAX(people_count), 0) AS today_max_people_count,
-                        COALESCE(ROUND(AVG(people_count)::numeric, 2), 0) AS today_avg_people_count
+                        COALESCE(
+                            ROUND(AVG(people_count)::numeric, 2),
+                            0
+                        ) AS today_avg_people_count
                     FROM admin.capture_logs
                     WHERE status = 'success'
                       AND measured_at >= date_trunc('day', now())
@@ -183,10 +211,7 @@ def save_successful_inference(people_count: int, trigger_type: str = "scheduled"
                     today_max_people_count = EXCLUDED.today_max_people_count,
                     today_avg_people_count = EXCLUDED.today_avg_people_count
                 """,
-                (
-                    people_count,
-                    measured_at
-                )
+                (people_count, measured_at),
             )
 
             # 3. dashboard.today_hourly_stats 갱신
@@ -254,7 +279,10 @@ def save_successful_inference(people_count: int, trigger_type: str = "scheduled"
                 summary AS (
                     SELECT
                         current_date AS stat_date,
-                        COALESCE(ROUND(AVG(people_count)::numeric, 2), 0) AS avg_people_count,
+                        COALESCE(
+                            ROUND(AVG(people_count)::numeric, 2),
+                            0
+                        ) AS avg_people_count,
                         COALESCE(MAX(people_count), 0) AS max_people_count,
                         COALESCE(MIN(people_count), 0) AS min_people_count,
                         COUNT(*) AS sample_count
@@ -348,6 +376,7 @@ def save_successful_inference(people_count: int, trigger_type: str = "scheduled"
                 """
             )
 
+
 def get_today_stats_from_db():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -363,29 +392,18 @@ def get_today_stats_from_db():
             )
             rows = cur.fetchall()
 
-    return [
-        {
-            "hour": row[0],
-            "count": row[1]
-        }
-        for row in rows
-    ]
+    return [{"hour": row[0], "count": row[1]} for row in rows]
+
 
 def get_weekly_stats_from_db():
-    day_key_map = {
-        1: "mon",
-        2: "tue",
-        3: "wed",
-        4: "thu",
-        5: "fri"
-    }
+    day_key_map = {1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri"}
 
     weekly_stats = {
         "mon": [0] * 14,
         "tue": [0] * 14,
         "wed": [0] * 14,
         "thu": [0] * 14,
-        "fri": [0] * 14
+        "fri": [0] * 14,
     }
 
     with get_db_connection() as conn:
@@ -407,16 +425,18 @@ def get_weekly_stats_from_db():
         day_key = day_key_map.get(weekday)
         if not day_key:
             continue
-        
+
         index = hour - 9
         if 0 <= index < 14:
             weekly_stats[day_key][index] = to_float(avg_people_count)
 
     return weekly_stats
 
+
 # ---------------------------------------------
 
 SHOULD_CAPTURE = False
+
 
 @app.post("/api/v2/test/trigger")
 async def trigger_capture():
@@ -427,6 +447,7 @@ async def trigger_capture():
     SHOULD_CAPTURE = True
     return {"status": "success", "message": "Capture command issued to ESP32."}
 
+
 @app.get("/api/v2/device/command")
 async def get_device_command():
     """
@@ -434,11 +455,13 @@ async def get_device_command():
     """
     global SHOULD_CAPTURE
     if SHOULD_CAPTURE:
-        SHOULD_CAPTURE = False # 명령을 전달했으므로 다시 대기 상태로 변경
+        SHOULD_CAPTURE = False  # 명령을 전달했으므로 다시 대기 상태로 변경
         return {"command": "capture"}
     return {"command": "idle"}
 
+
 # --------------------------------------------
+
 
 @app.get("/")
 async def root():
@@ -447,12 +470,14 @@ async def root():
     """
     return FileResponse("../frontend/index.html")
 
+
 @app.get("/api/v2/count/current")
 async def get_current_count():
     """
     [프론트엔드용] 현재 동아리방 인원수를 반환합니다.
     """
     return get_current_status_from_db()
+
 
 @app.get("/api/v2/stats/today")
 async def get_today_stats():
@@ -461,6 +486,7 @@ async def get_today_stats():
     """
     return get_today_stats_from_db()
 
+
 @app.get("/api/v2/stats/weekly")
 async def get_weekly_stats():
     """
@@ -468,10 +494,12 @@ async def get_weekly_stats():
     """
     return get_weekly_stats_from_db()
 
+
 # --------------------------------------------
 
+
 @app.post("/api/v2/device/upload")
-async def upload_image(file: UploadFile = File(...)):
+async def upload_image(file: Annotated[UploadFile, File(...)]):
     """
     [ESP32용] ESP32-CAM이 업로드한 이미지를 서버 메모리에서만 처리합니다.
 
@@ -498,29 +526,34 @@ async def upload_image(file: UploadFile = File(...)):
 
             save_failed_inference(error_message=error_message, trigger_type="scheduled")
 
-            return {
-                "status": "error",
-                "message": error_message
-            }
+            return {"status": "error", "message": error_message}
 
         inference_start = time.perf_counter()
         people_count = infer_people_count(frame)
         inference_time_ms = int((time.perf_counter() - inference_start) * 1000)
 
-        save_successful_inference(people_count=people_count, trigger_type="scheduled", inference_time_ms=inference_time_ms)
+        save_successful_inference(
+            people_count=people_count,
+            trigger_type="scheduled",
+            inference_time_ms=inference_time_ms,
+        )
 
-        print(f"[{measured_at}] Inference Result: {people_count} people detected. Inference Time: {inference_time_ms} ms")
+        print(
+            f"[{measured_at}] Inference Result: "
+            f"{people_count} people detected. "
+            f"Inference Time: {inference_time_ms} ms"
+        )
 
         return {
             "status": "success",
             "message": "Image processed successfully",
-            "detected_count": people_count
+            "detected_count": people_count,
         }
     except Exception as e:
         error_message = str(e)
         print(f"Error during upload/inference: {error_message}")
 
-        try: 
+        try:
             save_failed_inference(error_message=error_message, trigger_type="scheduled")
         except Exception as db_error:
             print(f"Failed to save error log to DB: {str(db_error)}")
