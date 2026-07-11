@@ -9,18 +9,18 @@ async function fetchCurrentCount() {
       const newCount = Number(data.count ?? 0);
       const newUpdatedAt = data.updated_at ?? null;
       const shouldRefreshStats =
-        lastAnalysisAt !== null &&
-        newUpdatedAt !== null &&
-        newUpdatedAt !== lastAnalysisAt;
+        lastAnalysisAt !== null && newUpdatedAt !== null && newUpdatedAt !== lastAnalysisAt;
 
       updateLastAnalyzedTime(newUpdatedAt);
-      
+
       if (data.today_max_count !== undefined) {
-        document.getElementById('today-max').textContent = `${Math.round(Number(data.today_max_count ?? 0 ))}명`;
+        document.getElementById('today-max').textContent =
+          `${Math.round(Number(data.today_max_count ?? 0))}명`;
       }
       if (data.today_avg_count !== undefined) {
         const avgCount = Number(data.today_avg_count ?? 0);
-        document.getElementById('today-avg').textContent = `${avgCount.toFixed(1).replace('.0', '')}명`;
+        document.getElementById('today-avg').textContent =
+          `${avgCount.toFixed(1).replace('.0', '')}명`;
       }
 
       /* ToDo: 인원수가 변할 때마다 fetchInitialData()가 호출되어 /stats/today와 /stats/weekly를 모두 재요청함.
@@ -31,7 +31,7 @@ async function fetchCurrentCount() {
         animateCounter(currentCount);
       }
       if (shouldRefreshStats) {
-        fetchInitialData(); 
+        fetchInitialData();
       }
 
       lastAnalysisAt = newUpdatedAt;
@@ -69,9 +69,9 @@ async function fetchDeveloperData() {
 }
 
 function switchTab(tab) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  
+  document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
+
   document.getElementById('page-' + tab).classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
 
@@ -82,11 +82,13 @@ function switchTab(tab) {
 
 function selectDay(day) {
   selectedDay = day;
-  document.querySelectorAll('.day-btn').forEach(btn => {
+  document.querySelectorAll('.day-btn').forEach((btn) => {
     if (btn.dataset.day === day) {
-      btn.className = 'day-btn px-4 py-2 rounded-xl text-sm font-semibold bg-brand-600 text-white transition-all';
+      btn.className =
+        'day-btn px-4 py-2 rounded-xl text-sm font-semibold bg-brand-600 text-white transition-all';
     } else {
-      btn.className = 'day-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:border-brand-300 transition-all';
+      btn.className =
+        'day-btn px-4 py-2 rounded-xl text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:border-brand-300 transition-all';
     }
   });
   updateStatsChart(day);
@@ -96,8 +98,11 @@ function animateCounter(target) {
   const el = document.getElementById('counter-value');
   const current = parseInt(el.textContent) || 0;
   const diff = target - current;
-  if (diff === 0) { el.textContent = target; return; }
-  
+  if (diff === 0) {
+    el.textContent = target;
+    return;
+  }
+
   const steps = 30;
   const stepVal = diff / steps;
   let step = 0;
@@ -115,7 +120,11 @@ function animateCounter(target) {
 
 function updateCurrentTime() {
   const now = new Date();
-  const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const timeStr = now.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
   document.getElementById('current-time').textContent = timeStr;
 }
 
@@ -130,23 +139,27 @@ function updateLastAnalyzedTime(updatedAt) {
   const date = new Date(updatedAt);
 
   if (Number.isNaN(date.getTime())) {
-    el.textContent='--:--';
+    el.textContent = '--:--';
     return;
   }
 
-  el.textContent = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  el.textContent = date.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 }
 
 // XSS 방어용 문자열 변환 함수
 function escapeHTML(str) {
   if (!str) return '';
-  return String(str).replace(/[&<>"']/g, function(match) {
+  return String(str).replace(/[&<>"']/g, function (match) {
     return {
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
       '"': '&quot;',
-      "'": '&#39;'
+      "'": '&#39;',
     }[match];
   });
 }
@@ -155,12 +168,12 @@ function escapeHTML(str) {
 function getSafeUrl(url) {
   if (!url) return '#';
   const trimmedUrl = String(url).trim();
-  
+
   // URL이 http:// 또는 https:// 로 시작하는지 정규식으로 검사
   if (/^https?:\/\//i.test(trimmedUrl)) {
     return escapeHTML(trimmedUrl); // 안전하면 기존처럼 이스케이프 후 반환
   }
-  
+
   return '#'; // 이상한 스킴(javascript: 등)이면 링크 무효화
 }
 
@@ -168,14 +181,16 @@ function getSafeUrl(url) {
 function getFallbackImage(name) {
   const initial = escapeHTML(name).charAt(0);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="#6366f1" width="100" height="100"/><text x="50" y="55" font-size="40" text-anchor="middle" fill="white">${initial}</text></svg>`;
-  
+
   // 브라우저 호환성을 위해 안전하게 인코딩
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 function renderDevCards() {
   const container = document.getElementById('dev-sections');
-  container.innerHTML = versionData.map(ver => `
+  container.innerHTML = versionData
+    .map(
+      (ver) => `
     <div class="version-section">
       <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-3 mb-6">
         <div>
@@ -191,7 +206,9 @@ function renderDevCards() {
         </a>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        ${ver.developers.map(dev => `
+        ${ver.developers
+          .map(
+            (dev) => `
           <a href="${getSafeUrl(dev.github)}" target="_blank" rel="noopener noreferrer" class="block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden card-hover dev-card group relative">
             <div class="dev-card-header bg-gradient-to-br from-brand-500 to-brand-700 h-20 relative">
               <div class="absolute top-3 right-3 bg-black/20 backdrop-blur-md p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -205,7 +222,15 @@ function renderDevCards() {
             </div>
             <div class="pt-14 pb-6 px-5 text-center">
               <h3 class="text-lg font-bold text-gray-900 group-hover:text-brand-600 transition-colors">${escapeHTML(dev.name)}</h3>
-              <div class="flex flex-wrap items-center justify-center gap-1.5 mt-2">${(dev.role || '').split('&').map(role => `<span class="inline-block px-3 py-0.5 bg-brand-50 text-brand-700 text-xs font-semibold rounded-full">${escapeHTML(role.trim())}</span>`).join('')}</div>
+              <div class="flex flex-wrap items-center justify-center gap-1.5 mt-2">${(
+                dev.role || ''
+              )
+                .split('&')
+                .map(
+                  (role) =>
+                    `<span class="inline-block px-3 py-0.5 bg-brand-50 text-brand-700 text-xs font-semibold rounded-full">${escapeHTML(role.trim())}</span>`
+                )
+                .join('')}</div>
               <div class="mt-4 space-y-2.5 text-left">
                 <div class="flex items-center gap-2.5 text-sm">
                   <div class="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0">
@@ -228,15 +253,22 @@ function renderDevCards() {
               </div>
             </div>
           </a>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     </div>
-  `).join('');
+  `
+    )
+    .join('');
   lucide.createIcons();
 }
 
 function initDarkMode() {
-  if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+  if (
+    localStorage.getItem('theme') === 'dark' ||
+    (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  ) {
     document.documentElement.classList.add('dark');
   } else {
     document.documentElement.classList.remove('dark');
@@ -260,7 +292,7 @@ function toggleDark() {
 function init() {
   lucide.createIcons();
   initDarkMode();
-  
+
   const currentDayNum = new Date().getDay();
   const dayMapping = { 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri' };
 

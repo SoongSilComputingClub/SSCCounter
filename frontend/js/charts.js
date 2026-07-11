@@ -19,10 +19,10 @@ function getChartColors() {
 
 function renderMiniChart() {
   if (todayHours.length === 0) return;
-  
+
   const ctx = document.getElementById('miniChart').getContext('2d');
-  const labels = todayHours.map(h => h.hour + '시');
-  const data = todayHours.map(h => h.count);
+  const labels = todayHours.map((h) => h.hour + '시');
+  const data = todayHours.map((h) => h.count);
   const c = getChartColors();
 
   if (miniChartInstance) miniChartInstance.destroy();
@@ -31,24 +31,39 @@ function renderMiniChart() {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        data,
-        backgroundColor: data.map((_, i) => i === data.length - 1 ? c.barActive : c.barFill),
-        borderRadius: 6,
-        borderSkipped: false,
-      }]
+      datasets: [
+        {
+          data,
+          backgroundColor: data.map((_, i) => (i === data.length - 1 ? c.barActive : c.barFill)),
+          borderRadius: 6,
+          borderSkipped: false,
+        },
+      ],
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: {
-        backgroundColor: c.tooltipBg, titleFont: { family: 'Inter' }, bodyFont: { family: 'Inter' },
-        callbacks: { label: (ctx) => ctx.parsed.y + '명' }
-      }},
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.tooltipBg,
+          titleFont: { family: 'Inter' },
+          bodyFont: { family: 'Inter' },
+          callbacks: { label: (ctx) => ctx.parsed.y + '명' },
+        },
+      },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 }, color: c.tick } },
-        y: { grid: { color: c.grid }, ticks: { font: { family: 'Inter' }, color: c.tick }, beginAtZero: true }
-      }
-    }
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'Inter', size: 11 }, color: c.tick },
+        },
+        y: {
+          grid: { color: c.grid },
+          ticks: { font: { family: 'Inter' }, color: c.tick },
+          beginAtZero: true,
+        },
+      },
+    },
   });
 }
 
@@ -73,24 +88,50 @@ function updateStatsChart(day) {
     type: 'line',
     data: {
       labels: timeLabels,
-      datasets: [{
-        label: '평균 인원', data, borderColor: c.lineColor, backgroundColor: gradient,
-        fill: true, tension: 0.4, pointBackgroundColor: c.pointBg,
-        pointBorderColor: dark ? '#1e293b' : '#fff',
-        pointBorderWidth: 2, pointRadius: 5, pointHoverRadius: 8,
-      }]
+      datasets: [
+        {
+          label: '평균 인원',
+          data,
+          borderColor: c.lineColor,
+          backgroundColor: gradient,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: c.pointBg,
+          pointBorderColor: dark ? '#1e293b' : '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+        },
+      ],
     },
     options: {
-      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
-        tooltip: { backgroundColor: c.tooltipBg, titleFont: { family: 'Inter', size: 13 }, bodyFont: { family: 'Inter', size: 13 }, padding: 12, cornerRadius: 10, callbacks: { label: (ctx) => '평균 ' + ctx.parsed.y + '명' } }
+        tooltip: {
+          backgroundColor: c.tooltipBg,
+          titleFont: { family: 'Inter', size: 13 },
+          bodyFont: { family: 'Inter', size: 13 },
+          padding: 12,
+          cornerRadius: 10,
+          callbacks: { label: (ctx) => '평균 ' + ctx.parsed.y + '명' },
+        },
       },
       scales: {
-        x: { grid: { color: c.grid }, ticks: { font: { family: 'Inter', size: 12 }, color: c.tick } },
-        y: { grid: { color: c.grid }, ticks: { font: { family: 'Inter', size: 12 }, color: c.tick }, beginAtZero: true, suggestedMax: 10 }
-      }
-    }
+        x: {
+          grid: { color: c.grid },
+          ticks: { font: { family: 'Inter', size: 12 }, color: c.tick },
+        },
+        y: {
+          grid: { color: c.grid },
+          ticks: { font: { family: 'Inter', size: 12 }, color: c.tick },
+          beginAtZero: true,
+          suggestedMax: 10,
+        },
+      },
+    },
   });
 
   // Update stat cards
