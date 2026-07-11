@@ -4,6 +4,7 @@ uploaded_images/
 .devcontainer/
 .clangd
 Kconfig.projbuild
+node_modules/
 
 # ========================================================================
 # Python

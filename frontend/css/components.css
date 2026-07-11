@@ -10,13 +10,23 @@
   filter: drop-shadow(0 4px 20px rgba(99, 102, 241, 0.3));
 }
 
-.pulse-ring { animation: pulseRing 2s ease-out infinite; }
-.pulse-dot { animation: pulseDot 2s ease-out infinite; }
-.fade-in { animation: fadeIn 0.4s ease-out; }
-.status-badge { animation: statusBlink 3s ease-in-out infinite; }
+.pulse-ring {
+  animation: pulseRing 2s ease-out infinite;
+}
+.pulse-dot {
+  animation: pulseDot 2s ease-out infinite;
+}
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+.status-badge {
+  animation: statusBlink 3s ease-in-out infinite;
+}
 
 .card-hover {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 .card-hover:hover {
   transform: translateY(-4px);
@@ -28,5 +38,9 @@
   border-bottom: 2px solid #6366f1;
 }
 
-#dark-toggle { transition: transform 0.3s ease; }
-#dark-toggle:active { transform: rotate(25deg); }
+#dark-toggle {
+  transition: transform 0.3s ease;
+}
+#dark-toggle:active {
+  transform: rotate(25deg);
+}

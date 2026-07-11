@@ -8,24 +8,24 @@
 #include "esp_camera.h"
 #include "esp_http_client.h"
 
-#include "wifi_manager.h"  // Wi-Fi 매니저 헤더 포함
-#include "camera_manager.h"  // 카메라 매니저 헤더 포함
+#include "wifi_manager.h"   // Wi-Fi 매니저 헤더 포함
+#include "camera_manager.h" // 카메라 매니저 헤더 포함
 #include "sdkconfig.h"
 
 static const char *TAG = "SSCCam_Main";
 
-#define WIFI_SSID      CONFIG_WIFI_SSID
-#define WIFI_PASS      CONFIG_WIFI_PASSWORD
-#define SERVER_URL     CONFIG_SERVER_URL
-#define COMMAND_URL    CONFIG_COMMAND_URL
-#define MAXIMUM_RETRY  5
+#define WIFI_SSID CONFIG_WIFI_SSID
+#define WIFI_PASS CONFIG_WIFI_PASSWORD
+#define SERVER_URL CONFIG_SERVER_URL
+#define COMMAND_URL CONFIG_COMMAND_URL
+#define MAXIMUM_RETRY 5
 
 // 서버로 이미지를 전송하는 함수
 static esp_err_t send_image_to_server(camera_fb_t *fb) {
     esp_http_client_config_t config = {
         .url = SERVER_URL,
         .method = HTTP_METHOD_POST,
-        .timeout_ms = 5000, 
+        .timeout_ms = 5000,
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -34,11 +34,11 @@ static esp_err_t send_image_to_server(camera_fb_t *fb) {
     snprintf(content_type, sizeof(content_type), "multipart/form-data; boundary=%s", boundary);
     esp_http_client_set_header(client, "Content-Type", content_type);
 
-    const char *body_start = 
+    const char *body_start =
         "------ESP32BoundarySSCCounter\r\n"
         "Content-Disposition: form-data; name=\"file\"; filename=\"esp32_cam.jpg\"\r\n"
         "Content-Type: image/jpeg\r\n\r\n";
-    
+
     const char *body_end = "\r\n------ESP32BoundarySSCCounter--\r\n";
 
     int content_length = strlen(body_start) + fb->len + strlen(body_end);
@@ -59,8 +59,8 @@ void app_main(void) {
     // 1. NVS 초기화
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
 
@@ -97,13 +97,13 @@ void app_main(void) {
         //     .timeout_ms = 2000,
         // };
         // esp_http_client_handle_t cmd_client = esp_http_client_init(&cmd_config);
-        
+
         // char response_buffer[128] = {0};
         // esp_err_t err = esp_http_client_open(cmd_client, 0);
         // if (err == ESP_OK) {
         //     esp_http_client_fetch_headers(cmd_client);
         //     esp_http_client_read(cmd_client, response_buffer, sizeof(response_buffer));
-            
+
         //     // 서버 응답에 "capture"라는 단어가 있으면 사진 촬영 및 전송!
         //     if (strstr(response_buffer, "capture") != NULL) {
         //         ESP_LOGI(TAG, "Capture command received from server!");
