@@ -100,6 +100,8 @@ def get_current_status_from_db():
                     today_avg_people_count
                 FROM dashboard.current_status
                 WHERE id = 1
+                  AND updated_at >= date_trunc('day', now())
+                  AND updated_at < date_trunc('day', now()) + interval '1 day'
                 """
             )
             row = cur.fetchone()
